@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from utils.templates import templates
-from packages.web_app.views import router as general_router
+from packages.general.views import router as general_router
 
 app = FastAPI()
 

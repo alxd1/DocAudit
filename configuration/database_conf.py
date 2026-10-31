@@ -1,0 +1,7 @@
+# PostgreSQL configuration
+
+DB_HOST = "127.0.0.1"
+DB_PORT = 5432
+DB_NAME = "docaudit"
+DB_USER = "docaudit_user"
+DB_PASSWORD = "1234"

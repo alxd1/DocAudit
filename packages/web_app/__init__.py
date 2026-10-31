@@ -1,0 +1,1 @@
+'''General views for the application'''

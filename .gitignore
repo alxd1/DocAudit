@@ -5,6 +5,7 @@ __pycache__/
 *.so
 *.egg-info/
 *.egg
+test.py
 build/
 dist/
 
@@ -61,3 +62,14 @@ uploads/
 
 # Jupyter Notebook
 .ipynb_checkpoints/
+
+
+
+
+# Documents
+documents/
+*.docx
+*.doc
+*.odt
+*.pdf
+*_test.py

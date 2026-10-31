@@ -4,3 +4,4 @@ jinja2
 asyncpg
 pydantic
 python-multipart
+python-docx

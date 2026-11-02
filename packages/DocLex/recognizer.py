@@ -58,19 +58,30 @@ def get_base_value(
 
     return text.strip()
 
-def recognize(
-    text: str,
-    classes: dict[str, RecognitionClass],
-    hyperclass: str | None = None,
-) -> RecognitionResult | None:
 
+
+def clean_text(text: str) -> tuple[str, str]:
+    text = text.strip()
+
+    if text.endswith(")") and text.count(")") > text.count("("):
+        return text[:-1].rstrip(), "Удалена лишняя закрывающая скобка"
+
+    if text.endswith("."):
+        return text[:-1].rstrip(), "Удалена точка в конце значения"
+
+    return text, ""
+
+
+def recognize_raw(text: str, classes: dict[str, RecognitionClass], hyperclass: str | list[str] | None = None) -> RecognitionResult | None:
     if hyperclass is not None:
-        if hyperclass not in classes:
-            raise ValueError(
-                f"Неизвестный гиперкласс: {hyperclass}"
-            )
+        hyperclasses = [hyperclass] if isinstance(hyperclass, str) else hyperclass
 
-        classes = {hyperclass: classes[hyperclass]}
+        for name in hyperclasses:
+            if name not in classes:
+                raise ValueError(f"Неизвестный гиперкласс: {name}")
+
+        classes = {name: classes[name] for name in hyperclasses}
+
 
     for rule_type in (RuleType.EXACT, RuleType.REGEX):
         matches: list[RecognitionResult] = []
@@ -125,3 +136,27 @@ def recognize(
         return best_matches[0]
 
     return None
+
+
+
+def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str | list[str] | None = None) -> RecognitionResult | None:
+    result = recognize_raw(text, classes, hyperclass)
+
+    if result is not None:
+        return result
+
+    cleaned_text, correction = clean_text(text)
+
+    if not correction:
+        return None
+
+    result = recognize_raw(cleaned_text, classes, hyperclass)
+
+    if result is None:
+        return None
+
+    result.value = text
+    result.status = RecognitionStatus.WARNING
+    result.comment = correction
+
+    return result

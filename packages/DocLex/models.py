@@ -45,3 +45,7 @@ class RecognitionResult:
     value: str
     status: RecognitionStatus
     comment: str = ""
+    index: int | None = None
+
+    def set_index(self, index: int):
+        self.index = index

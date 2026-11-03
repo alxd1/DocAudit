@@ -22,7 +22,7 @@ class RecognitionRule:
     status: RecognitionStatus
     comment: str = ""
     line: int | None = None
-
+    priority: int = 0
 
 @dataclass
 class RecognitionValue:

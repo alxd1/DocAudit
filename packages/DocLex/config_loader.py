@@ -1,10 +1,8 @@
-
-
 from pathlib import Path
 import re
 
 from .models import RecognitionClass, RecognitionRule, RecognitionStatus, RecognitionValue, RuleType
-
+from configuration.configuration import DOC_LEX_DEFAULT_RULE_PRIORITY
 
 class DocLexConfigError(ValueError):
     """Invalid DocLex configuration."""
@@ -43,6 +41,7 @@ def _parse_quoted(text: str, pos: int, path: Path, line: int) -> tuple[str, int]
 
 
 def _parse_rule(text: str, path: Path, line: int) -> RecognitionRule:
+    priority, text = _extract_priority(text)
     pos = 0
     is_regex = text.startswith('r"')
     if is_regex:
@@ -76,7 +75,7 @@ def _parse_rule(text: str, path: Path, line: int) -> RecognitionRule:
         except re.error as exc:
             raise _error(path, line, f'Invalid regex: {exc}') from exc
     return RecognitionRule(value=value, rule_type=RuleType.REGEX if is_regex else RuleType.EXACT,
-                           status=status, comment=comment, line=line)
+                           status=status, comment=comment, line=line, priority=priority)
 
 
 def _parse_header(text: str, path: Path, line: int) -> str:
@@ -91,6 +90,19 @@ def _content_lines(path: Path):
         text = raw.strip()
         if text and not text.startswith('#'):
             yield line_no, text
+
+def _extract_priority(text: str) -> tuple[int, str]:
+    text = text.strip()
+
+    match = re.match(r'^(\d+)\s+(?=(?:r)?")', text)
+
+    if match is None:
+        return DOC_LEX_DEFAULT_RULE_PRIORITY, text
+
+    priority = int(match.group(1))
+    rule_text = text[match.end():].lstrip()
+
+    return priority, rule_text
 
 
 def load_value(path: Path) -> RecognitionValue:

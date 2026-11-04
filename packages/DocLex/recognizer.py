@@ -23,33 +23,33 @@ def normalize(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip().casefold()
 
 
-def rule_matches(text: str, rule: RecognitionRule) -> bool:
+def rule_matches(text: str, rule: RecognitionRule) -> re.Match | bool | None:
     if rule.rule_type == RuleType.EXACT:
-        return normalize(text) == normalize(rule.value)
+        return text == normalize(rule.value)
 
     if rule.rule_type == RuleType.REGEX:
-        return re.fullmatch(rule.value, text.strip(), flags=re.IGNORECASE) is not None
+        return re.fullmatch(rule.value, text, flags=re.IGNORECASE)
 
-    return False
+    return None
 
 
-def get_base_value(text: str, rule: RecognitionRule, canonical_value: str) -> str:
+
+def get_base_value(text: str, match: re.Match | bool, canonical_value: str) -> str:
     if canonical_value != "<value>":
         return canonical_value
 
-    if rule.rule_type == RuleType.REGEX:
-        match = re.fullmatch(rule.value, text.strip(), flags=re.IGNORECASE)
+    if isinstance(match, re.Match):
+        if "value" in match.groupdict():
+            return match.group("value")
 
-        if match is not None:
-            if "value" in match.groupdict():
-                return match.group("value")
+        return match.group(0)
 
-            return match.group(0)
-
-    return text.strip()
+    return text
 
 
 def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str | list[str] | None = None) -> RecognitionResult | None:
+    text = normalize(text)
+
     if hyperclass is not None:
         hyperclasses = [hyperclass] if isinstance(hyperclass, str) else hyperclass
 
@@ -68,16 +68,27 @@ def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str |
                     if rule.rule_type != rule_type:
                         continue
 
-                    if not rule_matches(text, rule):
+                    match = rule_matches(text, rule)
+
+                    if not match:
                         continue
+
+                    ret_value = None
+                    ret_span = None
+
+                    if isinstance(match, re.Match) and "ret" in match.groupdict():
+                        ret_value = match.group("ret")
+                        ret_span = match.span("ret")
 
                     matches.append((
                         RecognitionResult(
                             hyperclass=recognition_class.name,
-                            base_value=get_base_value(text, rule, value.name),
+                            base_value=get_base_value(text, match, value.name),
                             value=text,
                             status=rule.status,
                             comment=rule.comment,
+                            ret_value=ret_value,
+                            ret_span=ret_span,
                         ),
                         rule.priority,
                     ))
@@ -85,8 +96,6 @@ def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str |
         if not matches:
             continue
 
-        # Выбираем лучший статус, затем максимальный приоритет
-        # Выбираем лучший статус, затем наименьший приоритет правила
         best_score = min(
             (STATUS_PRIORITY[item.status], priority)
             for item, priority in matches
@@ -97,17 +106,23 @@ def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str |
             if (STATUS_PRIORITY[item.status], priority) == best_score
         ]
 
-        # Проверяем неоднозначность
         destinations = {
             (item.hyperclass, item.base_value)
             for item in best_matches
         }
 
         if len(destinations) > 1:
-            raise ValueError(
-                f"Ambiguous recognition for {text!r}: {destinations}"
-            )
+            raise ValueError(f"Ambiguous recognition for {text!r}: {destinations}")
 
-        return best_matches[0]
+        result = best_matches[0]
+        processor = classes[result.hyperclass].processor
+
+        if processor is not None:
+            result = processor(result)
+
+            if not isinstance(result, RecognitionResult):
+                raise TypeError(f"Processor for {best_matches[0].hyperclass} must return RecognitionResult")
+
+        return result
 
     return None

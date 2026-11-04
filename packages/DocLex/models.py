@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -37,6 +38,7 @@ class RecognitionClass:
     name: str
     values: list[RecognitionValue] = field(default_factory=list)
     source: Path | None = None
+    processor: Callable[["RecognitionResult"], "RecognitionResult"] | None = None
 
 
 @dataclass
@@ -47,6 +49,8 @@ class RecognitionResult:
     status: RecognitionStatus
     comment: str = ""
     index: int | None = None
+    ret_value: str | None = None
+    ret_span: tuple[int, int] | None = None
 
     def set_index(self, index: int):
         self.index = index

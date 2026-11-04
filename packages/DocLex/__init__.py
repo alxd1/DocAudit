@@ -1,4 +1,4 @@
-from configuration.configuration import DOC_LEX_RECOGNITION_RULES_DIRECTORY
+from .configuration import DOC_LEX_RECOGNITION_RULES_DIRECTORY
 
 from .config_loader import load_all_classes
 from .models import RecognitionResult

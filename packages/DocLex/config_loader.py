@@ -1,8 +1,10 @@
 from pathlib import Path
+import hashlib
+import importlib.util
 import re
 
 from .models import RecognitionClass, RecognitionRule, RecognitionStatus, RecognitionValue, RuleType
-from configuration.configuration import DOC_LEX_DEFAULT_RULE_PRIORITY
+from .configuration import DOC_LEX_DEFAULT_RULE_PRIORITY
 
 class DocLexConfigError(ValueError):
     """Invalid DocLex configuration."""
@@ -138,6 +140,25 @@ def load_values(path: Path) -> list[RecognitionValue]:
     return values
 
 
+def load_processor(directory: Path):
+    path = directory / '__processor__.py'
+    if not path.is_file():
+        return None
+    module_name = f"_doclex_processor_{hashlib.sha256(str(path.resolve()).encode()).hexdigest()}"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise DocLexConfigError(f"Cannot load processor: {path}")
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        raise DocLexConfigError(f"Error loading processor {path}: {exc}") from exc
+    processor = getattr(module, 'process', None)
+    if not callable(processor):
+        raise DocLexConfigError(f"Processor {path} must define callable process(result)")
+    return processor
+
+
 def load_class(directory: Path) -> RecognitionClass:
     class_file = directory / '__class__.dahc'
     if not class_file.is_file():
@@ -156,7 +177,7 @@ def load_class(directory: Path) -> RecognitionClass:
         if item.name.casefold() in seen:
             raise DocLexConfigError(f'Duplicate canonical value {item.name!r} in {directory}')
         seen.add(item.name.casefold())
-    return RecognitionClass(name=name, values=values, source=class_file)
+    return RecognitionClass(name=name, values=values, source=class_file, processor=load_processor(directory))
 
 
 

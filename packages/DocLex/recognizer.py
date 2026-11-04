@@ -11,10 +11,11 @@ from .models import (
 
 
 STATUS_PRIORITY = {
-    RecognitionStatus.GOOD: 4,
-    RecognitionStatus.NORMAL: 3,
+    RecognitionStatus.GOOD: 0,
+    RecognitionStatus.NORMAL: 1,
     RecognitionStatus.WARNING: 2,
-    RecognitionStatus.FATAL: 1,
+    RecognitionStatus.CRITICAL: 3,
+    RecognitionStatus.FATAL: 4,
 }
 
 
@@ -85,18 +86,27 @@ def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str |
             continue
 
         # Выбираем лучший статус, затем максимальный приоритет
-        best_score = max((STATUS_PRIORITY[item.status], -priority) for item, priority in matches)
+        # Выбираем лучший статус, затем наименьший приоритет правила
+        best_score = min(
+            (STATUS_PRIORITY[item.status], priority)
+            for item, priority in matches
+        )
 
         best_matches = [
             item for item, priority in matches
-            if (STATUS_PRIORITY[item.status], -priority) == best_score
+            if (STATUS_PRIORITY[item.status], priority) == best_score
         ]
 
         # Проверяем неоднозначность
-        destinations = {(item.hyperclass, item.base_value) for item in best_matches}
+        destinations = {
+            (item.hyperclass, item.base_value)
+            for item in best_matches
+        }
 
         if len(destinations) > 1:
-            raise ValueError(f"Ambiguous recognition for {text!r}: {destinations}")
+            raise ValueError(
+                f"Ambiguous recognition for {text!r}: {destinations}"
+            )
 
         return best_matches[0]
 

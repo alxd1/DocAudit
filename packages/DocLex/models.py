@@ -7,6 +7,7 @@ class RecognitionStatus(str, Enum):
     GOOD = "Good"
     NORMAL = "Normal"
     WARNING = "Warning"
+    CRITICAL = "Critical"
     FATAL = "Fatal"
 
 

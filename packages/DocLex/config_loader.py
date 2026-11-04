@@ -12,11 +12,7 @@ def _error(path: Path, line: int, message: str) -> DocLexConfigError:
     return DocLexConfigError(f"{path}:{line}: {message}")
 
 
-def _parse_quoted(text: str, pos: int, path: Path, line: int) -> tuple[str, int]:
-    """Parse double-quoted text; unescape only \\" and \\\\.
-
-    Other escapes, e.g. \\s and \\d, remain intact for regex rules.
-    """
+def _parse_quoted(text: str, pos: int, path: Path, line: int, raw: bool = False) -> tuple[str, int]:
     if pos >= len(text) or text[pos] != '"':
         raise _error(path, line, 'Expected opening double quote')
     pos += 1
@@ -29,8 +25,10 @@ def _parse_quoted(text: str, pos: int, path: Path, line: int) -> tuple[str, int]
             if pos + 1 >= len(text):
                 raise _error(path, line, 'Unfinished escape sequence')
             nxt = text[pos + 1]
-            if nxt in ('"', '\\'):
-                chars.append(nxt)
+            if nxt == '"':
+                chars.append('"')
+            elif nxt == '\\' and not raw:
+                chars.append('\\')
             else:
                 chars.append('\\' + nxt)
             pos += 2
@@ -46,7 +44,7 @@ def _parse_rule(text: str, path: Path, line: int) -> RecognitionRule:
     is_regex = text.startswith('r"')
     if is_regex:
         pos = 1
-    value, pos = _parse_quoted(text, pos, path, line)
+    value, pos = _parse_quoted(text, pos, path, line, raw=is_regex)
     if not value:
         raise _error(path, line, 'Empty rule value')
     rest = text[pos:].lstrip()
@@ -105,19 +103,39 @@ def _extract_priority(text: str) -> tuple[int, str]:
     return priority, rule_text
 
 
-def load_value(path: Path) -> RecognitionValue:
-    lines = iter(_content_lines(path))
-    try:
-        first_no, first = next(lines)
-    except StopIteration:
-        raise _error(path, 1, 'Empty .darc file')
-    name = _parse_header(first, path, first_no)
+def load_values(path: Path) -> list[RecognitionValue]:
+    values = []
+    name = None
     rules = []
-    for line_no, text in lines:
+    header_line = 0
+
+    for line_no, text in _content_lines(path):
+        if text.startswith('['):
+            if name is not None:
+                if not rules:
+                    raise _error(path, header_line, 'No rules for canonical value')
+
+                values.append(RecognitionValue(name=name, rules=rules, source=path))
+
+            name = _parse_header(text, path, line_no)
+            rules = []
+            header_line = line_no
+            continue
+
+        if name is None:
+            raise _error(path, line_no, 'Expected [name] header before rules')
+
         rules.append(_parse_rule(text, path, line_no))
+
+    if name is None:
+        raise _error(path, 1, 'Empty .darc file')
+
     if not rules:
-        raise _error(path, first_no, 'No rules in .darc file')
-    return RecognitionValue(name=name, rules=rules, source=path)
+        raise _error(path, header_line, 'No rules for canonical value')
+
+    values.append(RecognitionValue(name=name, rules=rules, source=path))
+
+    return values
 
 
 def load_class(directory: Path) -> RecognitionClass:
@@ -128,7 +146,11 @@ def load_class(directory: Path) -> RecognitionClass:
     if len(lines) != 1:
         raise _error(class_file, 1, 'Expected exactly one [ClassName] header')
     name = _parse_header(lines[0][1], class_file, lines[0][0])
-    values = [load_value(path) for path in sorted(directory.glob('*.darc'))]
+    values = [
+        value
+        for path in sorted(directory.glob('*.darc'))
+        for value in load_values(path)
+    ]
     seen = set()
     for item in values:
         if item.name.casefold() in seen:

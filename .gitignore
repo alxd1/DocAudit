@@ -9,6 +9,12 @@ test.py
 build/
 dist/
 
+
+
+*_test.py
+output.txt
+
+
 # Virtual environments
 .venv/
 venv/
@@ -72,6 +78,3 @@ documents/
 *.doc
 *.odt
 *.pdf
-
-*_test.py
-output.txt

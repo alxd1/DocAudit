@@ -140,22 +140,30 @@ def load_values(path: Path) -> list[RecognitionValue]:
     return values
 
 
-def load_processor(directory: Path):
-    path = directory / '__processor__.py'
+def load_processor(directory: Path, filename: str = "__processor__.py"):
+    path = directory / filename
+
     if not path.is_file():
         return None
+
     module_name = f"_doclex_processor_{hashlib.sha256(str(path.resolve()).encode()).hexdigest()}"
     spec = importlib.util.spec_from_file_location(module_name, path)
+
     if spec is None or spec.loader is None:
         raise DocLexConfigError(f"Cannot load processor: {path}")
+
     module = importlib.util.module_from_spec(spec)
+
     try:
         spec.loader.exec_module(module)
     except Exception as exc:
         raise DocLexConfigError(f"Error loading processor {path}: {exc}") from exc
-    processor = getattr(module, 'process', None)
+
+    processor = getattr(module, "process", None)
+
     if not callable(processor):
-        raise DocLexConfigError(f"Processor {path} must define callable process(result)")
+        raise DocLexConfigError(f"Processor {path} must define callable process()")
+
     return processor
 
 
@@ -193,7 +201,7 @@ def load_all_classes(root: str | Path) -> dict[str, RecognitionClass]:
     seen_names: set[str] = set()
 
     for directory in sorted(root.iterdir()):
-        if not directory.is_dir():
+        if not directory.is_dir() or directory.name == "__pycache__":
             continue
 
         recognition_class = load_class(directory)

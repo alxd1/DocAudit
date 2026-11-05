@@ -57,7 +57,7 @@ def print_server(server, index):
     disks = server.get("disks", [])
 
     if disks:
-        print(f"      Диски ({len(disks)}):")
+        print(f"      Диски:")
 
         disk_rows = [
             (
@@ -84,7 +84,6 @@ def print_server(server, index):
 
 
 def main():
-    print(recognize("SWAP"))
     total_tables = 0
     total_servers = 0
     total_global_messages = 0

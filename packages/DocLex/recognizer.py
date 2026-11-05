@@ -47,8 +47,16 @@ def get_base_value(text: str, match: re.Match | bool, canonical_value: str) -> s
     return text
 
 
-def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str | list[str] | None = None) -> RecognitionResult | None:
-    text = normalize(text)
+def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str | list[str] | None = None, preprocessor=None) -> RecognitionResult | None:
+    initial_text = text
+
+    if preprocessor is not None:
+        text = preprocessor(text)
+
+        if not isinstance(text, str):
+            raise TypeError("Preprocessor must return str")
+
+    processed_text = normalize(text)
 
     if hyperclass is not None:
         hyperclasses = [hyperclass] if isinstance(hyperclass, str) else hyperclass
@@ -68,27 +76,28 @@ def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str |
                     if rule.rule_type != rule_type:
                         continue
 
-                    match = rule_matches(text, rule)
+                    match = rule_matches(processed_text, rule)
 
                     if not match:
                         continue
 
-                    ret_value = None
-                    ret_span = None
+                    reg_value = None
+                    reg_span = None
 
                     if isinstance(match, re.Match) and "ret" in match.groupdict():
-                        ret_value = match.group("ret")
-                        ret_span = match.span("ret")
+                        reg_value = match.group("ret")
+                        reg_span = match.span("ret")
 
                     matches.append((
                         RecognitionResult(
                             hyperclass=recognition_class.name,
-                            base_value=get_base_value(text, match, value.name),
-                            value=text,
+                            base_value=get_base_value(processed_text, match, value.name),
+                            initial_text=initial_text,
+                            processed_text=processed_text,
                             status=rule.status,
                             comment=rule.comment,
-                            ret_value=ret_value,
-                            ret_span=ret_span,
+                            reg_value=reg_value,
+                            reg_span=reg_span,
                         ),
                         rule.priority,
                     ))

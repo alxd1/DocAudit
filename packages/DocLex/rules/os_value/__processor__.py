@@ -30,10 +30,10 @@ def add_warning(result: RecognitionResult, comment: str) -> None:
 
 
 def process(result: RecognitionResult) -> RecognitionResult:
-    if result.ret_span is None:
+    if result.reg_span is None:
         return result
 
-    remainder = result.value[result.ret_span[1]:]
+    remainder = result.processed_text[result.reg_span[1]:]
     match = VERSION_PATTERN.match(remainder)
 
     if match is None:

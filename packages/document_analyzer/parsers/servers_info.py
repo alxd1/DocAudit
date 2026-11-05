@@ -1,7 +1,5 @@
 import re
-
 from packages.DocLex import recognize
-
 from packages.DocLex.models import RecognitionStatus
 
 STATUS_PRIORITY = {
@@ -41,10 +39,20 @@ COLUMN_LABELS = {
     "DiskTypeColumn": "\"Тип диска\"",
 }
 
+def extract_server_name(value, messages):
+    server_name = re.sub(r"\*+", "", value)
+    server_name = normalize_value(server_name)
 
-def clean_value(value):
-    return re.sub(r"\*+", "", value).strip()
+    if server_name:
+        return server_name, None
 
+    number = add_server_message(
+        messages,
+        RecognitionStatus.WARNING,
+        "Пустое значение названия сервера."
+    )
+
+    return "n/a", number
 
 def get_table_indices(first_row, second_row):
     result = {class_name: [] for class_name in COLUMNS}
@@ -53,7 +61,7 @@ def get_table_indices(first_row, second_row):
     for class_name in COLUMNS:
         for row in (first_row, second_row):
             for i, cell in enumerate(row.cells):
-                recognition_result = recognize(clean_value(cell.text), hyperclass=class_name)
+                recognition_result = recognize(cell.text, hyperclass=class_name)
                 if recognition_result is None or recognition_result.status == RecognitionStatus.FATAL:
                     continue
                 recognition_result.set_index(i)
@@ -96,7 +104,7 @@ def is_header_row(row, indices):
         for index in indices[class_name]:
             if index >= len(row.cells):
                 continue
-            value = clean_value(row.cells[index].text)
+            value = row.cells[index].text
             recognition_result = recognize(value, hyperclass=class_name)
             if recognition_result is not None and recognition_result.status != RecognitionStatus.FATAL:
                 matches += 1
@@ -105,7 +113,7 @@ def is_header_row(row, indices):
 
 
 def get_row_values(row):
-    return [clean_value(cell.text) for cell in row.cells]
+    return [cell.text.strip() for cell in row.cells]
 
 
 def is_department_row(row):
@@ -126,14 +134,14 @@ def is_vertical_merge_continuation(row, index):
 
 
 def split_disk_values(value):
-    values = [clean_value(item) for item in value.splitlines()]
+    values = [item.strip() for item in value.splitlines()]
     while values and not values[-1]:
         values.pop()
     return values
 
 
 def normalize_value(value):
-    return " ".join(clean_value(value).split())
+    return " ".join(value.split())
 
 
 def add_server_message(messages, status, message):
@@ -147,8 +155,7 @@ def add_global_message(messages, hyperclass, status, message):
 
 
 def recognize_value(value, hyperclass, server_name, label, messages):
-    value = normalize_value(value)
-    if not value:
+    if not value.strip():
         number = add_server_message(
             messages, RecognitionStatus.CRITICAL,
             f'Не указано значение {label}.'
@@ -172,7 +179,7 @@ def recognize_value(value, hyperclass, server_name, label, messages):
         comment = f", {recognition_result.comment}" if recognition_result.comment else ""
         number = add_server_message(
             messages, recognition_result.status,
-            f'Найдено значение {label} "{value}"{comment}'
+            f'Исходное значение {label} "{" ".join(value.split())}"{comment}'
         )
         return recognition_result.base_value, number
     return recognition_result.base_value, None
@@ -277,7 +284,7 @@ def extract_servers_info(table):
                 comment = f", {item.comment}" if item.comment else ""
                 add_global_message(
                     global_messages, class_name, item.status,
-                    f'Найдено название "{item.value}"{comment}'
+                    f'Исходное название "{" ".join(item.initial_text.split())}"{comment}'   
                 )
     disk_columns = {
         class_name: COLUMN_LABELS[class_name]
@@ -345,15 +352,12 @@ def extract_servers_info(table):
             ))
             current_server["source_rows"].append(row_number)
             continue
+
         messages = {}
-        if server_name:
-            name_value = (server_name, None)
-        else:
-            number = add_server_message(
-                messages, RecognitionStatus.WARNING, "Пустое значение названия сервера."
-            )
-            server_name = "n/a"
-            name_value = (server_name, number)
+
+        name_value = extract_server_name(cells[name_index], messages)
+        server_name = name_value[0]
+
         os = recognize_value(os_text, "OSValue", server_name, "ОС", messages)
         cpu = recognize_value(cpu_text, "CPUValue", server_name, "CPU", messages)
         ram = recognize_value(ram_text, "RAMValue", server_name, "RAM", messages)

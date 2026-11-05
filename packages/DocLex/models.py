@@ -45,12 +45,13 @@ class RecognitionClass:
 class RecognitionResult:
     hyperclass: str
     base_value: str
-    value: str
+    initial_text: str
+    processed_text: str
     status: RecognitionStatus
     comment: str = ""
     index: int | None = None
-    ret_value: str | None = None
-    ret_span: tuple[int, int] | None = None
+    reg_value: str | None = None
+    reg_span: tuple[int, int] | None = None
 
     def set_index(self, index: int):
         self.index = index

@@ -58,9 +58,9 @@ def _parse_rule(text: str, path: Path, line: int) -> RecognitionRule:
         raise _error(path, line, 'Expected rule status')
     status_text = status_match.group(1)
     try:
-        status = RecognitionStatus(status_text)
-    except ValueError as exc:
-        raise _error(path, line, f'Unknown status {status_text!r}') from exc
+        status = RecognitionStatus[status_text.upper()]
+    except KeyError as exc:
+        raise _error(path, line, f"Unknown status {status_text!r}") from exc
     rest = rest[status_match.end():].lstrip()
     comment = ''
     if rest.startswith('|'):

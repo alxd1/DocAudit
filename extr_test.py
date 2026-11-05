@@ -2,8 +2,7 @@
 from pathlib import Path
 from docx import Document
 
-from packages.DocLex import recognize
-from packages.document_analyzer.parsers.servers_info import extract_servers_info
+from packages.document_analyzer.parsers.servers_info import extract_servers_info, status_to_string
 
 
 DOCX_FOLDER = "documents"
@@ -31,7 +30,7 @@ def print_global_messages(messages):
         print(f"    {hyperclass}:")
 
         for status, message in items:
-            print(f"      [{status.value}] {message}")
+            print(f"      [{status_to_string(status)}] {message}")
 
 
 def print_server_messages(messages):
@@ -41,7 +40,7 @@ def print_server_messages(messages):
     print("      Сообщения:")
 
     for number, (status, message) in messages.items():
-        print(f"        №{number} [{status.value}] {message}")
+        print(f"        №{number} [{status_to_string(status)}] {message}")
 
 
 def print_server(server, index):

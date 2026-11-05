@@ -1,6 +1,5 @@
 import re
-from packages.DocLex import recognize
-from packages.DocLex.models import RecognitionStatus
+from packages.DocLex import recognize, RecognitionStatus, status_to_string
 
 STATUS_PRIORITY = {
     RecognitionStatus.GOOD: 0,
@@ -80,7 +79,7 @@ def get_table_indices(first_row, second_row):
             continue
         best_result = min(
             result[class_name],
-            key=lambda item: STATUS_PRIORITY[item.status]
+            key=lambda item: item.status
         )
         result[class_name] = [best_result]
     result["TopHeaderRow"] = (

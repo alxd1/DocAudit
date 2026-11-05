@@ -4,13 +4,6 @@ import re
 from packages.DocLex.models import RecognitionResult, RecognitionStatus
 
 
-STATUS_PRIORITY = {
-    RecognitionStatus.GOOD: 0,
-    RecognitionStatus.NORMAL: 1,
-    RecognitionStatus.WARNING: 2,
-    RecognitionStatus.CRITICAL: 3,
-    RecognitionStatus.FATAL: 4,
-}
 
 
 VERSION_PATTERN = re.compile(
@@ -23,8 +16,7 @@ VERSION_PATTERN = re.compile(
 
 
 def add_warning(result: RecognitionResult, comment: str) -> None:
-    if STATUS_PRIORITY[result.status] < STATUS_PRIORITY[RecognitionStatus.WARNING]:
-        result.status = RecognitionStatus.WARNING
+    result.status = result.status = max(result.status, RecognitionStatus.WARNING)
 
     result.comment = "; ".join(filter(None, [result.comment, comment]))
 

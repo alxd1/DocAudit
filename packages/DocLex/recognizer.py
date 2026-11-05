@@ -9,16 +9,6 @@ from .models import (
     RuleType,
 )
 
-
-STATUS_PRIORITY = {
-    RecognitionStatus.GOOD: 0,
-    RecognitionStatus.NORMAL: 1,
-    RecognitionStatus.WARNING: 2,
-    RecognitionStatus.CRITICAL: 3,
-    RecognitionStatus.FATAL: 4,
-}
-
-
 def normalize(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip().casefold()
 
@@ -106,13 +96,13 @@ def recognize(text: str, classes: dict[str, RecognitionClass], hyperclass: str |
             continue
 
         best_score = min(
-            (STATUS_PRIORITY[item.status], priority)
+            (item.status, priority)
             for item, priority in matches
         )
 
         best_matches = [
             item for item, priority in matches
-            if (STATUS_PRIORITY[item.status], priority) == best_score
+            if (item.status, priority) == best_score
         ]
 
         destinations = {

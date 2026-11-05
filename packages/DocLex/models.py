@@ -1,16 +1,18 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, IntEnum
 from pathlib import Path
 
 
-class RecognitionStatus(str, Enum):
-    GOOD = "Good"
-    NORMAL = "Normal"
-    WARNING = "Warning"
-    CRITICAL = "Critical"
-    FATAL = "Fatal"
+class RecognitionStatus(IntEnum):
+    GOOD = 0
+    NORMAL = 1
+    WARNING = 2
+    CRITICAL = 3
+    FATAL = 4
 
+def status_to_string(status: RecognitionStatus | int) -> str:
+    return RecognitionStatus(status).name.capitalize()
 
 class RuleType(str, Enum):
     EXACT = "exact"

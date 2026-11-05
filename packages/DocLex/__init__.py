@@ -1,22 +1,10 @@
 from .configuration import DOC_LEX_RECOGNITION_RULES_DIRECTORY
-
-from .config_loader import load_all_classes
-from .models import RecognitionResult
-from .recognizer import recognize as _recognize
-
-
-RECOGNITION_CLASSES = load_all_classes(DOC_LEX_RECOGNITION_RULES_DIRECTORY)
-
-
-from .configuration import DOC_LEX_RECOGNITION_RULES_DIRECTORY
-
 from .config_loader import load_all_classes, load_processor
 from .models import RecognitionResult
 from .recognizer import recognize as _recognize
-
+from .models import RecognitionResult, RecognitionStatus, status_to_string
 
 RECOGNITION_CLASSES = load_all_classes(DOC_LEX_RECOGNITION_RULES_DIRECTORY)
-
 PREPROCESSOR = load_processor(DOC_LEX_RECOGNITION_RULES_DIRECTORY, "__preprocessor__.py")
 POSTPROCESSOR = load_processor(DOC_LEX_RECOGNITION_RULES_DIRECTORY, "__postprocessor__.py")
 

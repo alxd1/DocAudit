@@ -73,5 +73,5 @@ documents/
 *.odt
 *.pdf
 
-
+*_test.py
 output.txt
